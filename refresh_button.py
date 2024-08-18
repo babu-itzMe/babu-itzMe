@@ -6,17 +6,11 @@ from PyQt6.QtCore import QPropertyAnimation, Qt, QByteArray, pyqtProperty
 class RefreshButton(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        # SVG code as a string
-        # svg_data = '''
-        #     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100" height="100" >
-        #         <path d="M386.3 160L336 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z"/>
-        #     </svg>
-        # '''
         svg_data = '''
-<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 32 32" width="32" height="32" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M24.144 10H21c-1.106 0 -2 0.894 -2 2s0.894 2 2 2h8c1.106 0 2 -0.894 2 -2V4c0 -1.106 -0.894 -2 -2 -2s-2 0.894 -2 2v3.2l-1.1 -1.1c-5.469 -5.469 -14.331 -5.469 -19.8 0s-5.469 14.331 0 19.8 14.331 5.469 19.8 0c0.781 -0.781 0.781 -2.05 0 -2.831s-2.05 -0.781 -2.831 0c-3.906 3.906 -10.238 3.906 -14.144 0s-3.906 -10.238 0 -14.144 10.238 -3.906 14.144 0z"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 32 32" width="32" height="32" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink">
+                <path d="M24.144 10H21c-1.106 0 -2 0.894 -2 2s0.894 2 2 2h8c1.106 0 2 -0.894 2 -2V4c0 -1.106 -0.894 -2 -2 -2s-2 0.894 -2 2v3.2l-1.1 -1.1c-5.469 -5.469 -14.331 -5.469 -19.8 0s-5.469 14.331 0 19.8 14.331 5.469 19.8 0c0.781 -0.781 0.781 -2.05 0 -2.831s-2.05 -0.781 -2.831 0c-3.906 3.906 -10.238 3.906 -14.144 0s-3.906 -10.238 0 -14.144 10.238 -3.906 14.144 0z"></path>
+            </svg>
         '''
-
         # Load the SVG from the string using QByteArray
         self.svg_renderer = QSvgRenderer(QByteArray(svg_data.encode()))
 

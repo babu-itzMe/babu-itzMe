@@ -48,9 +48,9 @@ class MyWidget(QWidget):
         font_com_id = QFontDatabase.addApplicationFont(font_com_path)
         if font_com_id != -1:
             font_com_name = QFontDatabase.applicationFontFamilies(font_com_id)[0]
-        # Set up the top label with 100px height
+        # Set up the top label with 80px height
         self.top_label = QLabel('WELLS FARGO', self)
-        self.top_label.setFixedHeight(75)
+        self.top_label.setFixedHeight(80)
         self.top_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if font_com_id != -1:
             self.top_label.setFont(QFont(font_com_name))
@@ -79,19 +79,15 @@ class MyWidget(QWidget):
                                         "border-bottom: 3px solid #585759;"
                                         "border-left: 50px solid #585759;"
                                         "border-right: 50px solid #585759;")
-        #0727f2;
         main_layout.addWidget(self.middle_label)
 
         # Add a spacer to position the buttons correctly
         spacer_top = QSpacerItem(20, 30, QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
         main_layout.addSpacerItem(spacer_top)
-
         
         # Create an instance of RotatingButton with text "Refresh Data"
         self.rotating_button = RefreshButton(self)
         self.rotating_button.refresh_excel_data = self.load_and_update_data
-        # Add the rotating button to the layout
-        # self.apply_button_style(self.rotating_button, bg_color="grey", hr_color="#3FA2F6")
         main_layout.addWidget(self.rotating_button)
 
         # Create a QLabel to display the text from the Excel file
@@ -100,12 +96,8 @@ class MyWidget(QWidget):
         main_layout.addWidget(self.top_label)
 
         self.grid_layout = QGridLayout()
-        self.grid_layout.setContentsMargins(20, 0, 20, 0)  # Add 20 pixels of padding to the left and right
+        self.grid_layout.setContentsMargins(20, 0, 20, 0)
         self.grid_layout.setSpacing(10)
-
-
-
-
 
         main_layout.addLayout(self.grid_layout)
                               
@@ -120,11 +112,10 @@ class MyWidget(QWidget):
         self.bottom_label.setStyleSheet("background-color: lightgrey; font-size: 18px; font-weight: bold;")
         main_layout.addWidget(self.bottom_label)
 
-        #####
+        # load and update data - first time
         self.load_and_update_data()
         # Setup global hotkeys
         self.setup_hotkeys()
-
 
     def draw_vertical_line(self):
         # Create a vertical line (QFrame)
@@ -134,7 +125,6 @@ class MyWidget(QWidget):
         line.setLineWidth(3)  # Set the line width (thickness)
         line.setStyleSheet("border: 2px solid grey;")  # Set the color and thickness
         return line
-        # grid_layout.addWidget(line, 0, col_num, 13, 1)
 
     def apply_button_style(self, button, bg_color, hr_color):
         """Apply a consistent style to the given button."""
@@ -161,8 +151,6 @@ class MyWidget(QWidget):
     def load_and_update_data(self):
         self.clear_buttons()
         self.button_data = self.read_button_names_from_excel(self.excel_file_path)
-        # print("Excel data reloaded.")
-        # print(self.button_data[-1])
         self.create_buttons_from_data()
 
     def create_buttons_from_data(self):
@@ -299,7 +287,6 @@ class MyWidget(QWidget):
         for data in self.button_data:
             if data['name'].startswith(f"({key})"):
                 if data['name'].find("N/A") != -1:
-                    # self.show_alert()
                     self.show_error_message("Error", "No Data Found !!!")
                     break
                 else:
@@ -316,7 +303,6 @@ class MyWidget(QWidget):
         self.setup_hotkeys()
 
     def show_error_message(self, title, message):
-        """ Show an error message box """
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Icon.Critical)
         html_message = "<b style='color: red; font-size:18px;'>" + message + "</b>"
