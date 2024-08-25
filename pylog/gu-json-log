@@ -1,0 +1,166 @@
+import json
+import matplotlib.pyplot as plt
+from datetime import datetime
+from graphviz import Digraph
+
+def parse_log_file(log_file, module_filter=None, level_filter=None):
+    with open(log_file, 'r') as f:
+        log_entries = []
+        for line in f:
+            try:
+                log_entry = json.loads(line.strip())
+                timestamp = log_entry.get('timestamp')
+                level = log_entry.get('level')
+                module = log_entry.get('module')
+                message = log_entry.get('message')
+
+                if (module_filter and module_filter not in module) or (level_filter and level != level_filter):
+                    continue
+
+                log_entries.append((timestamp, level, module, message))
+                
+                # Print a few entries to ensure correct parsing
+                if len(log_entries) < 5:
+                    print(f"Parsed Entry: {timestamp}, {level}, {module}, {message}")
+            
+            except json.JSONDecodeError as e:
+                print(f"Error parsing line: {line.strip()} - {e}")
+                
+    return log_entries
+
+def print_execution_flow(log_entries):
+    if not log_entries:
+        print("No log entries found to print.")
+        return
+    
+    print("Execution Flow:")
+    for entry in log_entries:
+        timestamp, level, module, message = entry
+        print(f"Time: {timestamp}, Module: {module}, Level: {level}, Message: {message}")
+
+###
+import plotly.graph_objects as go
+from datetime import datetime
+from collections import Counter
+import plotly.io as pio
+
+def visualize_execution_flow_with_plotly(log_entries):
+    if not log_entries:
+        print("No log entries found for plotting.")
+        return
+
+    # Convert timestamps to datetime objects and sort the entries by timestamp
+    log_entries_sorted = sorted(log_entries, key=lambda entry: datetime.strptime(entry[0], '%Y-%m-%dT%H:%M:%S.%f'))
+    timestamps = [datetime.strptime(entry[0], '%Y-%m-%dT%H:%M:%S.%f') for entry in log_entries_sorted]
+    modules = [entry[2] for entry in log_entries_sorted]
+    levels = [entry[1] for entry in log_entries_sorted]
+
+    # Create a mapping of modules to numeric values for plotting
+    module_counts = Counter(modules)
+    module_labels = sorted(module_counts.keys())
+    module_to_num = {label: i for i, label in enumerate(module_labels)}
+    module_numbers = [module_to_num[module] for module in modules]
+
+    # Define colors for different log levels
+    level_colors = {
+        "ERROR": "red",
+        "CRITICAL": "darkred",
+        "WARNING": "orange",
+        "INFO": "blue",
+        "DEBUG": "green",
+        "TRACE": "purple"
+    }
+
+    # Create the plot
+    fig = go.Figure()
+
+    for level in level_colors.keys():
+        level_indices = [i for i, lvl in enumerate(levels) if lvl == level]
+        fig.add_trace(go.Scatter(
+            x=[timestamps[i] for i in level_indices],
+            y=[module_numbers[i] for i in level_indices],
+            mode='markers+lines',
+            marker=dict(size=8, color=level_colors[level]),
+            line=dict(width=2),
+            name=level,
+            text=[f"{modules[i]} ({module_counts[modules[i]]})" for i in level_indices],
+            hoverinfo='text'
+        ))
+
+    # Update layout for better interactivity
+    fig.update_layout(
+        title='Execution Flow Over Time',
+        xaxis_title='Time',
+        yaxis_title='Module',
+        yaxis=dict(
+            tickvals=list(range(len(module_labels))),
+            ticktext=[f"{module} ({module_counts[module]})" for module in module_labels]
+        ),
+        xaxis_rangeslider_visible=True,
+        xaxis_type='date',
+        hovermode='closest',
+        legend_title='Log Level'
+    )
+
+    # Save the plot as an HTML file and show it in the browser
+    pio.write_html(fig, 'execution_flow_timeline_json.html')
+    print("Plot saved as 'execution_flow_timeline_json.html'. Open this file in a browser to view the plot.")
+
+
+###
+
+
+
+def visualize_flow_with_graphviz(log_entries):
+    if not log_entries:
+        print("No log entries found for Graphviz.")
+        return
+
+    dot = Digraph(comment='Execution Flow')
+
+    previous_module = None
+    for entry in log_entries:
+        timestamp, level, module, message = entry
+        dot.node(module, module)
+        if previous_module and previous_module != module:
+            dot.edge(previous_module, module, label=timestamp)
+        previous_module = module
+
+    dot.render('execution_flow', format='png')  # Save as a PNG file
+    print("Graphviz visualization saved as 'execution_flow.png'.")
+
+# Example usage:
+log_entries = parse_log_file('sample_log_file.jsonl')
+
+# Print the execution flow
+print_execution_flow(log_entries)
+
+# Visualize the execution flow over time using Matplotlib and save as PNG
+# visualize_execution_flow_with_matplotlib(log_entries)
+# Call the function
+visualize_execution_flow_with_plotly(log_entries)
+# Visualize the flow structure using Graphviz and save as PNG
+# visualize_flow_with_graphviz(log_entries)
+
+
+### sample_log_file.jsonl
+# {"timestamp": "2024-08-25T19:54:15.758671", "level": "DEBUG", "module": "module_D", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:16.209504", "level": "ERROR", "module": "module_D", "message": "This is a sample log message.", "traceback": "Traceback (most recent call last):\n  File '/path/to/file.py', line 1, in function\n    raise ValueError('Simulated exception for testing')\nValueError: Simulated exception for testing"}
+# {"timestamp": "2024-08-25T19:54:16.660669", "level": "CRITICAL", "module": "module_A", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:17.111545", "level": "DEBUG", "module": "module_C", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:17.562319", "level": "DEBUG", "module": "module_A", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:18.013105", "level": "DEBUG", "module": "module_A", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:18.464218", "level": "CRITICAL", "module": "module_B", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:18.915360", "level": "CRITICAL", "module": "module_A", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:19.366362", "level": "DEBUG", "module": "module_A", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:19.817317", "level": "DEBUG", "module": "module_C", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:20.268548", "level": "ERROR", "module": "module_C", "message": "This is a sample log message.", "traceback": "Traceback (most recent call last):\n  File '/path/to/file.py', line 1, in function\n    raise ValueError('Simulated exception for testing')\nValueError: Simulated exception for testing"}
+# {"timestamp": "2024-08-25T19:54:20.719492", "level": "ERROR", "module": "module_A", "message": "This is a sample log message.", "traceback": "Traceback (most recent call last):\n  File '/path/to/file.py', line 1, in function\n    raise ValueError('Simulated exception for testing')\nValueError: Simulated exception for testing"}
+# {"timestamp": "2024-08-25T19:54:21.170212", "level": "DEBUG", "module": "module_D", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:21.620916", "level": "ERROR", "module": "module_A", "message": "This is a sample log message.", "traceback": "Traceback (most recent call last):\n  File '/path/to/file.py', line 1, in function\n    raise ValueError('Simulated exception for testing')\nValueError: Simulated exception for testing"}
+# {"timestamp": "2024-08-25T19:54:22.071699", "level": "DEBUG", "module": "module_B", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:22.522666", "level": "ERROR", "module": "module_C", "message": "This is a sample log message.", "traceback": "Traceback (most recent call last):\n  File '/path/to/file.py', line 1, in function\n    raise ValueError('Simulated exception for testing')\nValueError: Simulated exception for testing"}
+# {"timestamp": "2024-08-25T19:54:22.973854", "level": "CRITICAL", "module": "module_B", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:23.424411", "level": "CRITICAL", "module": "module_A", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:23.875294", "level": "DEBUG", "module": "module_B", "message": "This is a sample log message.", "traceback": null}
+# {"timestamp": "2024-08-25T19:54:24.326509", "level": "DEBUG", "module": "module_D", "message": "This is a sample log message.", "traceback": null}
