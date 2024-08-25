@@ -1,0 +1,128 @@
+import plotly.graph_objects as go
+from datetime import datetime
+from collections import Counter
+import plotly.io as pio
+import re
+
+def parse_log_file(log_file):
+    log_entries = []
+    timestamp_pattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})'
+    level_pattern = r'\[(.*?)\]'
+    module_pattern = r'\[module_(.*?)\]'
+    
+    with open(log_file, 'r') as f:
+        lines = f.readlines()
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if re.match(timestamp_pattern, line):
+            timestamp = re.search(timestamp_pattern, line).group(1)
+            level = re.search(level_pattern, line).group(1)
+            module = re.search(module_pattern, line).group(1)
+            message = line.split(' - ', 1)[1] if ' - ' in line else ''
+            
+            # Handle potential multiline traceback
+            traceback = []
+            i += 1
+            while i < len(lines) and lines[i].strip().startswith('Traceback'):
+                traceback.append(lines[i].strip())
+                i += 1
+            if traceback:
+                message += '\n' + '\n'.join(traceback)
+                
+            log_entries.append((timestamp, level, f"module_{module}", message))
+        i += 1
+    
+    return log_entries
+
+def visualize_execution_flow_with_plotly(log_entries):
+    if not log_entries:
+        print("No log entries found for plotting.")
+        return
+
+    # Convert timestamps to datetime objects and sort the entries by timestamp
+    log_entries_sorted = sorted(log_entries, key=lambda entry: datetime.strptime(entry[0], '%Y-%m-%d %H:%M:%S,%f'))
+    timestamps = [datetime.strptime(entry[0], '%Y-%m-%d %H:%M:%S,%f') for entry in log_entries_sorted]
+    modules = [entry[2] for entry in log_entries_sorted]
+    levels = [entry[1] for entry in log_entries_sorted]
+
+    # Create a mapping of modules to numeric values for plotting
+    module_counts = Counter(modules)
+    module_labels = sorted(module_counts.keys())
+    module_to_num = {label: i for i, label in enumerate(module_labels)}
+    module_numbers = [module_to_num[module] for module in modules]
+
+    # Define colors for different log levels
+    level_colors = {
+        "ERROR": "red",
+        "CRITICAL": "darkred",
+        "WARNING": "orange",
+        "INFO": "blue",
+        "DEBUG": "green",
+        "TRACE": "purple"
+    }
+
+    # Create the plot
+    fig = go.Figure()
+
+    for level in level_colors.keys():
+        level_indices = [i for i, lvl in enumerate(levels) if lvl == level]
+        fig.add_trace(go.Scatter(
+            x=[timestamps[i] for i in level_indices],
+            y=[module_numbers[i] for i in level_indices],
+            mode='markers+lines',
+            marker=dict(size=8, color=level_colors[level]),
+            line=dict(width=2),
+            name=level,
+            text=[f"{modules[i]} ({module_counts[modules[i]]})" for i in level_indices],
+            hoverinfo='text'
+        ))
+
+    # Update layout for better interactivity
+    fig.update_layout(
+        title='Execution Flow Over Time',
+        xaxis_title='Time',
+        yaxis_title='Module',
+        yaxis=dict(
+            tickvals=list(range(len(module_labels))),
+            ticktext=[f"{module} ({module_counts[module]})" for module in module_labels]
+        ),
+        xaxis_rangeslider_visible=True,
+        xaxis_type='date',
+        hovermode='closest',
+        legend_title='Log Level'
+    )
+
+    # Save the plot as an HTML file and show it in the browser
+    pio.write_html(fig, 'execution_flow_timeline.html')
+    print("Plot saved as 'execution_flow_timeline.html'. Open this file in a browser to view the plot.")
+
+# Example usage
+log_entries = parse_log_file('sample_log_file_1.log')
+
+# Call the function
+visualize_execution_flow_with_plotly(log_entries)
+
+
+### sample_log_file_1.log
+# 2024-08-25 18:50:58,807 [CRITICAL] [module_B] - Timeout while waiting for the resource.
+# 2024-08-25 18:50:58,808 [DEBUG] [module_D] - Starting the main loop.
+# 2024-08-25 18:50:58,809 [ERROR] [module_A] - Simulated exception for testing
+# Traceback (most recent call last):
+#   File "/mnt/d/WSL_Ubuntu/python-logger-analysis/generate_log.py", line 56, in simulate_logs
+#     raise ValueError("Simulated exception for testing")
+# ValueError: Simulated exception for testing
+# 2024-08-25 18:50:58,816 [ERROR] [module_C] - Fetching data from the API.
+# 2024-08-25 18:50:58,816 [DEBUG] [module_C] - Terminating process.
+# 2024-08-25 18:50:58,817 [CRITICAL] [module_E] - Processing data...
+# 2024-08-25 18:50:58,817 [DEBUG] [module_A] - Initializing module...
+# 2024-08-25 18:50:58,818 [CRITICAL] [module_B] - Timeout while waiting for the resource.
+# 2024-08-25 18:50:58,819 [CRITICAL] [module_D] - Fetching data from the API.
+# 2024-08-25 18:50:58,819 [INFO] [module_C] - Terminating process.
+# 2024-08-25 18:50:58,820 [WARNING] [module_E] - Connection established.
+# 2024-08-25 18:50:58,820 [CRITICAL] [module_C] - Data validation successful.
+# 2024-08-25 18:50:58,820 [INFO] [module_A] - A critical error occurred.
+# 2024-08-25 18:50:58,821 [ERROR] [module_C] - Initializing module...
+# 2024-08-25 18:50:58,821 [ERROR] [module_D] - Timeout while waiting for the resource.
+# 2024-08-25 18:50:58,822 [ERROR] [module_A] - A critical error occurred.
